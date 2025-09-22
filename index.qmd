@@ -76,18 +76,33 @@ Delete this entire section (including the "Do Before Lab" and "Do During Lab" se
 **Response 1: Prior Evolution and Justification**
 *How did your understanding of Houston's extreme rainfall evolve through the iterative prior specification process? What knowledge sources proved most valuable for extreme value analysis?*
 
+Ans: Houston faces extrem rainfall in 2017 in Harvey, where I saw from NOAA data that the max one day rainfall was 16.07 inch in one day...For our GEV we are look max daily annual rainfall in a year...
+
+.Now say if I imagine X10(10 year return period)=11 inch(just assume an event less than harvey rainfall), X50(say harvey is 50 year event)=17 inch and shape=0.05(I assume it to be small considering that the tail will certainly remain bounded like gumbel or frechet, if shape is very high then the return level will be unbounded which shouldn't be a case), then from equation of inverse CDF, there will be unknown paramter meu and sigma(bz we know shape parameter and XT as we assumed)...so for two equations X10 and X50 in inverse CDF, two unknown can be solved, the value can come meu as 3.58(location parameter) and sigma(Scale parameter) can be 3.1 if we solve those equations....
+
+Now, we are not sure that if 17 inch is 50 year or 100 year event, in that case if we consider 17 inch as X100 and 11 inch as X10, the value of meu and sigma will change to say 5.8 and 2.1...so consider location parameter as Normal(5,2) means the bound is  5-2sigma=5-(2x2)1 and 5+2sigma=5+(2x2), that can cover rainfall of 3.58 and 5.8 in this range...
+
+for scale parameter, the dist is log(sigma)=Normal(m,n). So say, log_σ ~ Normal(0.5, 0.4); that means that mean is 0.5 and sigma is 0.4 for shape parameter, so (mean±2sigma) is in 0.5 ± 0.8 = [-0.3,1.3], now exp(-0.3)=0.74 and exp(1.3)=3.67 which cover our previous value of 3.1 and 2.1..
+
+And for shape parameter let's consider we dont have very heavy tail bz onbly harvey got a very high rainfall, so we dont need to consider unbounded tail that much, that's why I consider shape parameter as (0.05,0.10),
+
+If these parameters are considered, I think the graph looks much better
 **Response 2: Data Learning and Posterior Insights**
 *How did the observed data change your prior beliefs about GEV parameters? What does this reveal about the balance between domain knowledge and empirical evidence in Bayesian analysis?*
 
+Ans: Here, when we were considering very bad value for location, scale and shape parameters, to generate fake rainfall and returnh period, the graph was going very unrealistic, say like 10 year event was going for 75 inch rainfall, 250 year event was going for 10 inch rainfall, which shouldn't be true, because with increase in return period the return level will increase.
+
+But, when I saw max one day rainfall data of aHarvey in last 30 years, I assume that this one day rainfall canb be a 50 or 100 year return period event, and then any rainfall less than that say 11 inch can be a 10 year event, Then I tried to use the concept of inverse CDF to calculate the location and scale parameter for two equations two unknown concept (X10 and X50); (X10 and X100) considering shape parameter as 0.05(or 0 also can be assumed for gumbel, which will just make location and scale parameter unknow for inverse CDF)....Then calculating two set of location and scale parameter for (X10,X50) and (X10,X100), I tried to guess the mean and std dev which is described in Ques 1....So domain knowledge(NOAA report) helps to update my belief(priors into posteriors).
+
 **Response 3: Two-Station Bayesian Comparison**
 *Should the same priors apply to both stations? How do posterior differences relate to geographic and climatic factors, and what are the implications for regional analysis?*
-
+Ans: We should use different priors for different stations(Say one is located in coastal, one in inland) because climate varies in place to place. But if the stations are located in the same region, we can use the same prior.
 **Response 4: Uncertainty Quantification and Model Validation**
 *How does Bayesian uncertainty quantification compare to MLE approaches? What do the diagnostic results tell you about model reliability?*
-
+Ans: R value 1 means, model is converging. For MLE,, we have just only one estimation ,there is no uncertainty quantification associated with it. But for Bayesian, we get bands of uncertainty for prior and posterior, because those comes from a distribution.
 **Response 5: Bayesian Workflow for PS1**
 *How will this iterative workflow experience help you tackle regional extreme value analysis in PS1? What challenges do you anticipate?*
-
+Ans: Iterative workflow is challenging, because it is always difficult to have some prior distributiona ssumption for location, scale and shape parameter because data can be missing from stations.
 ## Data Setup and Package Loading
 
 ### Loading Required Packages
@@ -98,9 +113,9 @@ This approach ensures we're using the correct package versions and may help you 
 ```{julia}
 #| output: false
 using Pkg
-lab_dir = dirname(@__FILE__)  # <1>
+lab_dir = "D:\\FALL 2025\\CEVE 543\\labs\\lab-4-fh31rice" # <1>
 Pkg.activate(lab_dir)
-# Pkg.instantiate() # uncomment this the first time you run the lab to install packages, then comment it back
+##Pkg.instantiate() # uncomment this the first time you run the lab to install packages, then comment it back
 ```
 
 1. Get the directory path where this notebook file is located
@@ -177,7 +192,7 @@ Next, choose the same station you used in Lab 3 for your analysis.
 
 
 ```{julia}
-my_stnid = 111  # REQUIRED: replace with your chosen station ID
+my_stnid = 112  # REQUIRED: replace with your chosen station ID
 my_station = @chain stations begin
     @filter(stnid == !!my_stnid)  # <1>
     first
@@ -220,9 +235,9 @@ We will iteratively refine them based on [prior predictive checks](https://arxiv
 ```{julia}
 #| output: false
 @model function gev_model(y)
-    μ ~ Normal(3.0, 3.0)
-    log_σ ~ Normal(0.0, 1.0)  # <1>
-    ξ ~ Normal(0.0, 0.3)
+    μ ~ Normal(5.0, 2.0)
+    log_σ ~ Normal(0.5, 0.4)  # <1>
+    ξ ~ Normal(0.05, 0.10)
     σ = exp(log_σ)  # <2>
     dist = GeneralizedExtremeValue(μ, σ, ξ)
     if length(y) > 0  # <3>
@@ -336,7 +351,7 @@ return_level_priors = [
     ReturnLevelPrior(2, 3.0, 1.5),
     ReturnLevelPrior(10, 8.0, 4),
     ReturnLevelPrior(50, 12.0, 6),
-    ReturnLevelPrior(100, 16, 8),
+    ReturnLevelPrior(100, 14, 8),
 ]
 ```
 
@@ -346,9 +361,9 @@ We can pass these into our Turing model
 #| output: false
 @model function gev_model_quantile_priors(y; return_level_priors=[])
 
-    μ ~ Normal(3.0, 3.0)
-    log_σ ~ Normal(0.0, 1.0)
-    ξ ~ Normal(0.0, 0.3)
+    μ ~ Normal(5.0, 2.0)
+    log_σ ~ Normal(0.5, 0.4)
+    ξ ~ Normal(0.05, 0.10)
     σ = exp(log_σ)
     dist = GeneralizedExtremeValue(μ, σ, ξ)
 
@@ -412,7 +427,7 @@ Are the uncertainties too tight or too wide?
 Go back and revise your `return_level_priors` if needed.
 When you're happy with your answers, set `overwrite=false` so you can load cached results in the future.
 :::
-
+Ans: So, these two graphs plot about retur level vs return [eriod priors, here wehn we gave prior to retunr period, the uncertainties bound in right picture is mpre realistic, the 250 year RP uncertainty lies in between 8 to 18, because return period and retunr level is more  easy to assume rather thanb assuming location, scale, and shape parameters.]
 ## Inference 
 
 Now we move from prior-only analysis to combining our prior beliefs with the observed rainfall data!
@@ -465,7 +480,7 @@ map_dist = GeneralizedExtremeValue(map_estimate.values[1], exp(map_estimate.valu
 #| output: false
 posterior_idata = let
     fname = joinpath(lab_dir, "posterior_data.nc")
-    overwrite = true
+    overwrite = false
     load_or_sample(fname, bayes_model; overwrite=overwrite)
 end
 posterior_GEVs = vec(GeneralizedExtremeValue.(posterior_idata.posterior.μ, exp.(posterior_idata.posterior.log_σ), posterior_idata.posterior.ξ))
@@ -597,7 +612,7 @@ nearest_stations = find_nearest_stations(my_station, stations, 5)
 We will pick one of these five nearest stations for comparison
 
 ```{julia}
-comparison_stnid = 478 # MODIFY THIS AND CHOOSE YOUR COMPARISON
+comparison_stnid = 121 # MODIFY THIS AND CHOOSE YOUR COMPARISON
 
 comparison_station = @chain stations begin
     @filter(stnid == !!comparison_stnid)
@@ -687,3 +702,19 @@ Should we have used different priors for each station?
 Do the return level uncertainties overlap significantly, or are they distinct?
 What does this tell you about spatial variability in extreme precipitation?
 :::
+Ans: For Austin the shape parameter(solid line is more unbounded, heavier tails, higher positive ξ) and facing more return level value for 250 years, but for Bay city, seems like the solid line is unbounded but with slighlt lower shape parameter value.
+
+Regarding the uncertainty(scale parameter), both the stations range seems to be very much similar pattern in terms of width.
+
+Regarding location paramter, austin is facing more central tendency.
+
+Austin, here is facing more return level maybe because of observing more tropical storm in city area.
+
+
+We should use different priors for different stations because climate varies in place to place.
+
+Yes, there is a overlap, say for 25 year return period both stations face return level of around 8 inch. But with increas in return period , the overlap reduces
+
+Spatial variability is important, because say like some stations might face heavy thunderstorm and that can shift the tail behaviour more, in those places, risk is also higher.
+
+
